@@ -1,3 +1,5 @@
 matplotlib
 boxsdk
 boxsdk[jwt]
+box-sdk-gen
+box-sdk-gen[jwt]
