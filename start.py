@@ -86,7 +86,7 @@ from boxsdk import Client
 from boxsdk.exception import BoxAPIException
 
 #jsonファイルのパス
-CONFIG_FILE = '/configファイルのパス/config.json'
+CONFIG_FILE = 'config.json'
 
 #BOX APIを使う準備
 auth = JWTAuth.from_settings_file(CONFIG_FILE)
