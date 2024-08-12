@@ -1,2 +1,3 @@
 matplotlib
 boxsdk
+"boxsdk[jwt]"
