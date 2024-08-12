@@ -80,41 +80,58 @@ with tab1:
 with tab2:
     zoom()
 
+######
+from boxsdk import JWTAuth
+from boxsdk import Client
+from boxsdk.exception import BoxAPIException
+
+#jsonファイルのパス
+CONFIG_FILE = '/configファイルのパス/config.json'
+
+#BOX APIを使う準備
+auth = JWTAuth.from_settings_file(CONFIG_FILE)
+client = Client(auth)
+
+# ユーザー情報を取得して表示（APIテスト）
+user = client.user().get()
+st.write(f'UserName:{user.name}(ID:{user.id}), Email: {user.login}')
+
+
 ########################
-import streamlit as st
-from boxsdk import Client, OAuth2
-from boxsdk.object.file import File
-from io import BytesIO
-from PIL import Image
+# import streamlit as st
+# from boxsdk import Client, OAuth2
+# from boxsdk.object.file import File
+# from io import BytesIO
+# from PIL import Image
 
-# Box APIのクライアント認証情報
-CLIENT_ID = st.secrets.CLIENT_ID.key 
-CLIENT_SECRET =st.secrets.CLIENT_SECRET.key
-DEVELOPER_TOKEN = st.secrets.DEVELOPER_TOKEN.key  # またはアクセストークン
+# # Box APIのクライアント認証情報
+# CLIENT_ID = st.secrets.CLIENT_ID.key 
+# CLIENT_SECRET =st.secrets.CLIENT_SECRET.key
+# DEVELOPER_TOKEN = st.secrets.DEVELOPER_TOKEN.key  # またはアクセストークン
 
-# OAuth2認証の設定
-oauth2 = OAuth2(client_id=CLIENT_ID, client_secret=CLIENT_SECRET, access_token=DEVELOPER_TOKEN)
-client = Client(oauth2)
+# # OAuth2認証の設定
+# oauth2 = OAuth2(client_id=CLIENT_ID, client_secret=CLIENT_SECRET, access_token=DEVELOPER_TOKEN)
+# client = Client(oauth2)
 
-# StreamlitのUI
-st.title("Box Image Viewer")
+# # StreamlitのUI
+# st.title("Box Image Viewer")
 
-# 表示するBoxフォルダのID
-folder_id = '0'
+# # 表示するBoxフォルダのID
+# folder_id = '0'
 
-# フォルダ内のアイテムを取得
-folder = client.folder(folder_id).get()
-items = folder.get_items()
+# # フォルダ内のアイテムを取得
+# folder = client.folder(folder_id).get()
+# items = folder.get_items()
 
-# 画像ファイルのリストを作成
-image_files = [item for item in items if isinstance(item, File) and item.name.lower().endswith(('png', 'jpg', 'jpeg', 'gif'))]
+# # 画像ファイルのリストを作成
+# image_files = [item for item in items if isinstance(item, File) and item.name.lower().endswith(('png', 'jpg', 'jpeg', 'gif'))]
 
-# 画像の選択
-selected_image = st.selectbox("Select an image", [img.name for img in image_files])
+# # 画像の選択
+# selected_image = st.selectbox("Select an image", [img.name for img in image_files])
 
-# 選択された画像を取得して表示
-if selected_image:
-    file_id = next(img.id for img in image_files if img.name == selected_image)
-    box_file = client.file(file_id).content()
-    image = Image.open(BytesIO(box_file))
-    st.image(image, caption=selected_image)
+# # 選択された画像を取得して表示
+# if selected_image:
+#     file_id = next(img.id for img in image_files if img.name == selected_image)
+#     box_file = client.file(file_id).content()
+#     image = Image.open(BytesIO(box_file))
+#     st.image(image, caption=selected_image)
