@@ -88,6 +88,8 @@ from io import BytesIO
 from PIL import Image
 
 # Box APIのクライアント認証情報
+CLIENT_ID = st.secrets.CLIENT_ID.key 
+CLIENT_SECRET =st.secrets.CLIENT_SECRET.key
 #DEVELOPER_TOKEN = 'YOUR_DEVELOPER_TOKEN'  # またはアクセストークン
 
 # OAuth2認証の設定
