@@ -133,6 +133,109 @@
 import streamlit as st
 import requests
 
+# # OAuth 2.0設定
+# client_id = st.secrets["CLIENT_ID"]
+# client_secret = st.secrets["CLIENT_SECRET"]
+# redirect_uri = 'https://kgkgkg.streamlit.app/'
+
+
+# auth_url = 'https://account.box.com/api/oauth2/authorize'
+# token_url = 'https://api.box.com/oauth2/token'
+# files_url = 'https://api.box.com/2.0/folders/0/items'  # ルートフォルダーのURL
+
+# # 認証URLを生成
+# def get_auth_url():
+#     return (
+#         f"{auth_url}?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}"
+#     )
+
+# # アクセストークン取得
+# def get_access_token(auth_code):
+#     data = {
+#         'grant_type': 'authorization_code',
+#         'code': auth_code,
+#         'client_id': client_id,
+#         'client_secret': client_secret,
+#         'redirect_uri': redirect_uri
+#     }
+#     response = requests.post(token_url, data=data)
+#     return response.json().get('access_token')
+
+# # Box内のファイルを取得
+# def get_files(access_token):
+#     headers = {
+#         'Authorization': f'Bearer {access_token}'
+#     }
+#     response = requests.get(files_url, headers=headers)
+#     if response.status_code == 200:
+#         return response.json().get('entries', [])
+#     else:
+#         st.write("ファイルの取得に失敗しました。")
+#         return []
+
+# # 画像ファイルをフィルタリング
+# def filter_images(files):
+#     image_extensions = ['.jpg', '.jpeg', '.png', '.gif']
+#     return [file for file in files if any(file['name'].lower().endswith(ext) for ext in image_extensions)]
+
+# # 選択された画像を表示
+# def display_selected_image(access_token, file_id, file_name):
+#     download_url = f"https://api.box.com/2.0/files/{file_id}/content"
+    
+#     headers = {
+#         'Authorization': f'Bearer {access_token}'
+#     }
+#     response = requests.get(download_url, headers=headers)
+    
+#     if response.status_code == 200:
+#         st.image(response.content, caption=file_name)
+#         st.write(f"ファイルID: {file_id}")
+#     else:
+#         st.write(f"{file_name} の取得に失敗しました。")
+
+# def main():
+#     st.title("Boxから画像ファイルを選択して表示")
+
+#     # 認証URLを表示
+#     auth_url = get_auth_url()
+#     st.markdown(f"[Boxで認証するにはここをクリックしてください]({auth_url})")
+
+#     # 現在のURLを取得し、認証コードを取得
+#     query_params = st.experimental_get_query_params()
+#     auth_code = query_params.get('code', [None])[0]
+
+#     if auth_code:
+#         # アクセストークンの取得
+#         access_token = get_access_token(auth_code)
+
+#         if access_token:
+#             st.write("認証成功！")
+
+#             # ファイルを取得
+#             files = get_files(access_token)
+
+#             # 画像ファイルを表示
+#             images = filter_images(files)
+#             if images:
+#                 st.write("### 画像ファイルを選択してください")
+#                 image_names = {image['name']: image['id'] for image in images}
+#                 selected_image_name = st.selectbox("画像ファイル名", list(image_names.keys()))
+                
+#                 if selected_image_name:
+#                     selected_image_id = image_names[selected_image_name]
+#                     display_selected_image(access_token, selected_image_id, selected_image_name)
+#             else:
+#                 st.write("画像ファイルが見つかりませんでした。")
+#         else:
+#             st.write("アクセストークンの取得に失敗しました。")
+    
+# if __name__ == "__main__":
+#     main()
+
+
+import streamlit as st
+import requests
+
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
@@ -159,6 +262,13 @@ def get_access_token(auth_code):
         'redirect_uri': redirect_uri
     }
     response = requests.post(token_url, data=data)
+    
+    # エラーハンドリングの追加
+    if response.status_code != 200:
+        st.write("アクセストークンの取得に失敗しました。")
+        st.write(f"エラーメッセージ: {response.json().get('error_description')}")
+        return None
+    
     return response.json().get('access_token')
 
 # Box内のファイルを取得
@@ -231,3 +341,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+
