@@ -121,26 +121,23 @@ with tab2:
 #     image = Image.open(BytesIO(box_file))
 #     st.image(image, caption=selected_image)
 
-
 import streamlit as st
 import requests
 from requests.auth import HTTPBasicAuth
 import webbrowser
 
 # OAuth 2.0設定
-client_id = '4iyp4sdhqhfoytegk1rvy9yv68enprrg'
-client_secret = 'nw88rBDZ3jxxJqthW8OBiejfm5ACmWtN'
+client_id = 'YOUR_CLIENT_ID'
+client_secret = 'YOUR_CLIENT_SECRET'
 redirect_uri = 'http://localhost:8501/'
 auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
 
-# 認証コード取得
-def get_auth_code():
-    auth_request_url = (
+# 認証コード取得のためのURLを作成
+def get_auth_url():
+    return (
         f"{auth_url}?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}"
     )
-    webbrowser.open(auth_request_url)
-    return st.text_input("Boxから取得した認証コードを入力してください:")
 
 # アクセストークン取得
 def get_access_token(auth_code):
@@ -169,8 +166,12 @@ def display_box_image(file_id, access_token):
 def main():
     st.title("Boxから画像を取得して表示")
 
-    # 認証コードの取得
-    auth_code = get_auth_code()
+    # 認証URLを表示
+    auth_url = get_auth_url()
+    st.markdown(f"[Boxで認証するにはここをクリックしてください]({auth_url})")
+
+    # 認証コードの入力を促す
+    auth_code = st.text_input("Boxから取得した認証コードを入力してください:")
 
     if auth_code:
         # アクセストークンの取得
