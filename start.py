@@ -270,6 +270,11 @@ def main():
     auth_url = get_auth_url()
     st.markdown(f"[Boxで認証するにはここをクリックしてください]({auth_url})")
 
+    # 現在のURLを取得し、認証コードを取得
+    query_params = st.experimental_get_query_params()
+    auth_code = query_params.get('code', [None])[0]
+    st.write(auth_code)
+
     # 認証コードの入力を促す
     auth_code = st.text_input("Boxから取得した認証コードを入力してください:")
 
