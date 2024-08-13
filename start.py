@@ -1,15 +1,15 @@
 
 # ############################
 # import streamlit as st
-# import requests
+# # import requests
 
-# OAuth 2.0設定
-client_id = st.secrets["CLIENT_ID"]
-client_secret = st.secrets["CLIENT_SECRET"]
-redirect_uri = 'https://kgkgkg.streamlit.app/'
+# # OAuth 2.0設定
+# client_id = st.secrets["CLIENT_ID"]
+# client_secret = st.secrets["CLIENT_SECRET"]
+# redirect_uri = 'https://kgkgkg.streamlit.app/'
 
-# auth_url = 'https://account.box.com/api/oauth2/authorize'
-# token_url = 'https://api.box.com/oauth2/token'
+# # auth_url = 'https://account.box.com/api/oauth2/authorize'
+# # token_url = 'https://api.box.com/oauth2/token'
 # files_url = 'https://api.box.com/2.0/folders/0/items'  # ルートフォルダーのURL
 
 # # 認証URLを生成
