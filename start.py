@@ -276,7 +276,7 @@ def main():
     st.write(auth_code)
 
     # 認証コードの入力を促す
-    auth_code = st.text_input("Boxから取得した認証コードを入力してください:")
+    #auth_code = st.text_input("Boxから取得した認証コードを入力してください:")
 
     if auth_code:
         # アクセストークンの取得
