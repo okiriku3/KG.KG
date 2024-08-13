@@ -562,6 +562,9 @@ def main():
                 
                 image_options = [image['name'] for image in images]
                 selected_image_name = st.selectbox("画像ファイル名を選択", image_options)
+
+                image_id_options= [image['id'] for image in images]
+                selected_image_id = st.selectbox("画像ファイル名を選択", image_id_options)
                 
                 if selected_image_name:
                     selected_image_id = next(image['id'] for image in images if image['name'] == selected_image_name)
