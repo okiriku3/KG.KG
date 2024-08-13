@@ -81,21 +81,6 @@ with tab2:
     zoom()
 
 ######
-from boxsdk import JWTAuth
-from boxsdk import Client
-from boxsdk.exception import BoxAPIException
-
-#jsonファイルのパス
-#CONFIG_FILE = 'config.json'
-
-#BOX APIを使う準備
-auth = JWTAuth.from_settings_file("config.json")
-client = Client(auth)
-
-# ユーザー情報を取得して表示（APIテスト）
-user = client.user().get()
-st.write(f'UserName:{user.name}(ID:{user.id}), Email: {user.login}')
-
 
 ########################
 # import streamlit as st
