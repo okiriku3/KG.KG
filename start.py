@@ -196,8 +196,8 @@ import streamlit as st
 import requests
 
 # OAuth 2.0設定
-client_id = '4iyp4sdhqhfoytegk1rvy9yv68enprrg'
-client_secret = 'nw88rBDZ3jxxJqthW8OBiejfm5ACmWtN'
+client_id = st.secrets["CLIENT_ID"]
+client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'
 
 auth_url = 'https://account.box.com/api/oauth2/authorize'
