@@ -123,13 +123,12 @@ with tab2:
 
 import streamlit as st
 import requests
-from requests.auth import HTTPBasicAuth
-import webbrowser
 
 # OAuth 2.0設定
 client_id = '4iyp4sdhqhfoytegk1rvy9yv68enprrg'
 client_secret = 'nw88rBDZ3jxxJqthW8OBiejfm5ACmWtN'
-redirect_uri = 'http://localhost:8501/'
+redirect_uri = 'https://kgkgkg.streamlit.app/'
+
 auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
 
