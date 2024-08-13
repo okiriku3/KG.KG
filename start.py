@@ -249,7 +249,8 @@ def display_images(access_token):
             file_id = image['id']
             file_name = image['name']
             download_url = f"https://api.box.com/2.0/files/{file_id}/content"
-            
+
+            st.write(file_id,file_name)
             # 画像を取得して表示
             headers = {
                 'Authorization': f'Bearer {access_token}'
