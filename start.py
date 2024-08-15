@@ -7,7 +7,8 @@
 import streamlit as st
 import requests
 import sqlite3
-from datetime import datetime
+from io import BytesIO
+
 
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
@@ -18,23 +19,7 @@ auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
 root_folder_id = '0'  # ルートフォルダのID（「0」はルートフォルダを意味する）
 
-# SQLiteデータベース接続
-db_path = 'box_files.db'
-conn = sqlite3.connect(db_path)
-cursor = conn.cursor()
-
-# テーブル作成
-def create_table():
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS box_files (
-            id TEXT PRIMARY KEY,
-            name TEXT,
-            folder_id TEXT,
-            created_at TEXT,
-            shared_link TEXT
-        )
-    ''')
-    conn.commit()
+db_file_name = 'box_files.db'  # Box内でのSQLiteデータベースファイル名
 
 # 認証URLを生成
 def get_auth_url():
@@ -60,6 +45,19 @@ def get_access_token(auth_code):
     
     return response.json().get('access_token')
 
+# Box内のファイルを検索
+def search_box_files(access_token, query):
+    url = f'https://api.box.com/2.0/search?query={query}&file_extensions=db'
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json().get('entries', [])
+    else:
+        st.write("Boxファイルの検索に失敗しました。")
+        return []
+
 # Box内のフォルダのすべてのファイルを再帰的に取得
 def get_all_files(access_token, folder_id='0'):
     files = []
@@ -67,19 +65,17 @@ def get_all_files(access_token, folder_id='0'):
         'Authorization': f'Bearer {access_token}'
     }
     url = f'https://api.box.com/2.0/folders/{folder_id}/items'
-    params = {'limit': 1000}  # BoxのAPIは最大1000アイテムを一度に返します
+    params = {'limit': 1000}
     response = requests.get(url, headers=headers, params=params)
     
     if response.status_code == 200:
         items = response.json().get('entries', [])
         for item in items:
             if item['type'] == 'file':
-                # 各ファイルの詳細情報を取得
                 file_info = get_file_info(access_token, item['id'])
                 if file_info:
                     files.append(file_info)
             elif item['type'] == 'folder':
-                # サブフォルダ内のファイルを再帰的に取得
                 files.extend(get_all_files(access_token, item['id']))
     else:
         st.write("ファイルの取得に失敗しました。")
@@ -125,20 +121,41 @@ def create_shared_link(access_token, file_id):
         st.write(f"共有リンクの作成に失敗しました。ファイルID: {file_id}")
         return None
 
-# ファイル情報をデータベースに保存
-def save_to_db(files):
-    for file in files:
-        cursor.execute('''
-            INSERT OR REPLACE INTO box_files (id, name, folder_id, created_at, shared_link)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            file['id'],
-            file['name'],
-            file['parent']['id'],
-            file['created_at'],
-            file.get('shared_link', '')
-        ))
-    conn.commit()
+# Box内にSQLite DBファイルが存在するか確認
+def box_db_exists(access_token, db_file_name):
+    files = search_box_files(access_token, db_file_name)
+    return files[0] if files else None
+
+# Box内にDBファイルをアップロード
+def upload_db_to_box(access_token, folder_id, file_stream):
+    url = f'https://upload.box.com/api/2.0/files/content'
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    files = {
+        'attributes': (None, '{"name":"' + db_file_name + '","parent":{"id":"' + folder_id + '"}}'),
+        'file': (db_file_name, file_stream)
+    }
+    response = requests.post(url, headers=headers, files=files)
+    if response.status_code == 201:
+        st.write("データベースファイルがBoxにアップロードされました。")
+    else:
+        st.write("データベースファイルのアップロードに失敗しました。")
+
+# Box内の既存のDBファイルを更新
+def update_box_db_file(access_token, file_id, file_stream):
+    url = f'https://upload.box.com/api/2.0/files/{file_id}/content'
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    files = {
+        'file': (db_file_name, file_stream)
+    }
+    response = requests.post(url, headers=headers, files=files)
+    if response.status_code == 201:
+        st.write("データベースファイルがBoxで更新されました。")
+    else:
+        st.write("データベースファイルの更新に失敗しました。")
 
 def main():
     st.title("Box内の画像ファイルをSQLiteに保存")
@@ -158,9 +175,6 @@ def main():
         if access_token:
             st.write("認証成功！")
 
-            # テーブルを作成
-            create_table()
-
             # すべてのファイルを取得
             files = get_all_files(access_token, root_folder_id)
 
@@ -174,11 +188,54 @@ def main():
                     image['shared_link'] = shared_link
                 else:
                     image['shared_link'] = 'リンク作成失敗'
-            save_to_db(images)
-            
-            st.write("画像ファイルの情報をデータベースに保存しました。")
-        else:
-            st.write("アクセストークンの取得に失敗しました。")
-    
-if __name__ == "__main__":
-    main()
+
+            # Box内のDBファイルの存在確認
+            db_file = box_db_exists(access_token, db_file_name)
+
+            # DB接続
+            if db_file:
+                # Boxから既存のDBファイルをダウンロードして接続
+                st.write("既存のデータベースを更新します。")
+                url = f'https://api.box.com/2.0/files/{db_file["id"]}/content'
+                headers = {
+                    'Authorization': f'Bearer {access_token}'
+                }
+                response = requests.get(url, headers=headers)
+                db_stream = BytesIO(response.content)
+                conn = sqlite3.connect(db_stream)
+                cursor = conn.cursor()
+            else:
+                # 新規にDBファイルを作成
+                st.write("新しいデータベースを作成します。")
+                conn = sqlite3.connect(db_file_name)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS box_files (
+                        id TEXT PRIMARY KEY,
+                        name TEXT,
+                        folder_id TEXT,
+                        created_at TEXT,
+                        shared_link TEXT
+                    )
+                ''')
+                conn.commit()
+
+            # ファイル情報をDBに保存
+            for image in images:
+                cursor.execute('''
+                    INSERT OR REPLACE INTO box_files (id, name, folder_id, created_at, shared_link)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (
+                    image['id'],
+                    image['name'],
+                    image['parent']['id'],
+                    image['created_at'],
+                    image['shared_link']
+                ))
+            conn.commit()
+
+            # データベースファイルをBoxにアップロードまたは更新
+            with open(db_file_name, 'rb') as f:
+                db_stream = BytesIO(f.read())
+            if db_file:
+                update_box_db_file
