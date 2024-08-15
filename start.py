@@ -6,9 +6,8 @@
 
 import streamlit as st
 import requests
-from io import BytesIO
-from PIL import Image
-
+import sqlite3
+from datetime import datetime
 
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
@@ -18,6 +17,24 @@ redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリ
 auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
 root_folder_id = '0'  # ルートフォルダのID（「0」はルートフォルダを意味する）
+
+# SQLiteデータベース接続
+db_path = 'box_files.db'
+conn = sqlite3.connect(db_path)
+cursor = conn.cursor()
+
+# テーブル作成
+def create_table():
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS box_files (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            folder_id TEXT,
+            created_at TEXT,
+            shared_link TEXT
+        )
+    ''')
+    conn.commit()
 
 # 認証URLを生成
 def get_auth_url():
@@ -88,20 +105,6 @@ def filter_images(files):
     image_extensions = ['.jpg', '.jpeg', '.png', '.gif']
     return [file for file in files if any(file['name'].lower().endswith(ext) for ext in image_extensions)]
 
-# 画像を取得し、PIL形式に変換
-def get_image_pil(access_token, file_id):
-    download_url = f"https://api.box.com/2.0/files/{file_id}/content"
-    headers = {
-        'Authorization': f'Bearer {access_token}'
-    }
-    response = requests.get(download_url, headers=headers)
-    
-    if response.status_code == 200:
-        return Image.open(BytesIO(response.content))
-    else:
-        st.write(f"画像の取得に失敗しました。ファイルID: {file_id}")
-        return None
-
 # 共有リンクを生成
 def create_shared_link(access_token, file_id):
     url = f"https://api.box.com/2.0/files/{file_id}"
@@ -122,8 +125,23 @@ def create_shared_link(access_token, file_id):
         st.write(f"共有リンクの作成に失敗しました。ファイルID: {file_id}")
         return None
 
+# ファイル情報をデータベースに保存
+def save_to_db(files):
+    for file in files:
+        cursor.execute('''
+            INSERT OR REPLACE INTO box_files (id, name, folder_id, created_at, shared_link)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            file['id'],
+            file['name'],
+            file['parent']['id'],
+            file['created_at'],
+            file.get('shared_link', '')
+        ))
+    conn.commit()
+
 def main():
-    st.title("Box内の画像ファイル一覧")
+    st.title("Box内の画像ファイルをSQLiteに保存")
 
     # 認証URLを表示
     auth_url = get_auth_url()
@@ -140,42 +158,27 @@ def main():
         if access_token:
             st.write("認証成功！")
 
+            # テーブルを作成
+            create_table()
+
             # すべてのファイルを取得
             files = get_all_files(access_token, root_folder_id)
 
-            # 画像ファイルをフィルタリングして表示
+            # 画像ファイルをフィルタリング
             images = filter_images(files)
-            if images:
-                st.write("### 画像ファイル一覧")
-                
-                # 表のヘッダーを表示
-                cols = st.columns([2, 2, 2, 2, 3, 3])
-                cols[0].write("**ファイル名**")
-                cols[1].write("**ファイルID**")
-                cols[2].write("**フォルダID**")
-                cols[3].write("**ファイル作成日**")
-                cols[4].write("**画像プレビュー**")
-                cols[5].write("**共有リンク**")
-                
-                # 各画像ファイルを表に表示
-                for image in images:
-                    cols = st.columns([2, 2, 2, 2, 3, 3])
-                    cols[0].write(image['name'])
-                    cols[1].write(image['id'])
-                    cols[2].write(image['parent']['id'])  # フォルダIDを表示
-                    cols[3].write(image['created_at'])  # ファイル作成日を表示
-                    image_pil = get_image_pil(access_token, image['id'])
-                    if image_pil:
-                        cols[4].image(image_pil, caption=image['name'], use_column_width=True)
-                    # 共有リンクの作成
-                    shared_link = create_shared_link(access_token, image['id'])
-                    if shared_link:
-                        cols[5].write(shared_link)  # 共有リンクを省略せずに表示
-            else:
-                st.write("画像ファイルが見つかりませんでした。")
+            
+            # 共有リンクを作成し、データベースに保存
+            for image in images:
+                shared_link = create_shared_link(access_token, image['id'])
+                if shared_link:
+                    image['shared_link'] = shared_link
+                else:
+                    image['shared_link'] = 'リンク作成失敗'
+            save_to_db(images)
+            
+            st.write("画像ファイルの情報をデータベースに保存しました。")
         else:
             st.write("アクセストークンの取得に失敗しました。")
     
 if __name__ == "__main__":
     main()
-
