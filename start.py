@@ -9,6 +9,7 @@ import requests
 import sqlite3
 from io import BytesIO
 import pandas as pd
+import tempfile
 
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
@@ -157,6 +158,19 @@ def update_box_db_file(access_token, file_id, file_stream):
     else:
         st.write("データベースファイルの更新に失敗しました。")
 
+# BytesIOから一時ファイルを作成する
+def get_temp_db_file(db_stream):
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as temp_db:
+        temp_db.write(db_stream.getvalue())
+        temp_db.flush()
+        return temp_db.name
+
+def show_db_content(db_file_path):
+    conn = sqlite3.connect(db_file_path)
+    query = "SELECT name, id, folder_id, created_at, shared_link FROM box_files"
+    df = pd.read_sql_query(query, conn)
+    return df
+
 def main():
     st.title("Box内の画像ファイルをSQLiteに保存")
 
@@ -202,8 +216,7 @@ def main():
                 }
                 response = requests.get(url, headers=headers)
                 db_stream = BytesIO(response.content)
-                conn = sqlite3.connect(db_stream)
-                cursor = conn.cursor()
+                db_file_path = get_temp_db_file(db_stream)
             else:
                 # 新規にDBファイルを作成
                 st.write("新しいデータベースを作成します。")
@@ -220,19 +233,24 @@ def main():
                 ''')
                 conn.commit()
 
+                # 一時ファイルからDBファイルのパスを取得
+                db_file_path = get_temp_db_file(BytesIO(open(db_file_name, 'rb').read()))
+
             # ファイル情報をDBに保存
-            for image in images:
-                cursor.execute('''
-                    INSERT OR REPLACE INTO box_files (id, name, folder_id, created_at, shared_link)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (
-                    image['id'],
-                    image['name'],
-                    image['parent']['id'],
-                    image['created_at'],
-                    image['shared_link']
-                ))
-            conn.commit()
+            with sqlite3.connect(db_file_path) as conn:
+                cursor = conn.cursor()
+                for image in images:
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO box_files (id, name, folder_id, created_at, shared_link)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (
+                        image['id'],
+                        image['name'],
+                        image['parent']['id'],
+                        image['created_at'],
+                        image['shared_link']
+                    ))
+                conn.commit()
 
             # データベースファイルをBoxにアップロードまたは更新
             with open(db_file_name, 'rb') as f:
@@ -248,19 +266,9 @@ def main():
             if st.button('Show Box Files DB'):
                 st.write("データベースの内容を表示します。")
                 
-                # データベースファイルをBoxから取得
-                url = f'https://api.box.com/2.0/files/{db_file["id"]}/content'
-                headers = {
-                    'Authorization': f'Bearer {access_token}'
-                }
-                response = requests.get(url, headers=headers)
-                
-                # DBを読み込み
-                with BytesIO(response.content) as db_stream:
-                    conn = sqlite3.connect(db_stream)
-                    query = "SELECT name, id, folder_id, created_at, shared_link FROM box_files"
-                    df = pd.read_sql_query(query, conn)
-                    st.write(df)
+                # 一時ファイルからデータベースの内容を表示
+                df = show_db_content(db_file_path)
+                st.write(df)
 
 if __name__ == "__main__":
     main()
