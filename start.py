@@ -4,7 +4,6 @@
 # client_secret = st.secrets["CLIENT_SECRET"]
 # redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
 
-
 import streamlit as st
 import requests
 import sqlite3
@@ -13,7 +12,7 @@ import pandas as pd
 import tempfile
 from datetime import datetime
 
-# OAuth 2.0設定
+# # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
@@ -22,10 +21,85 @@ auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
 root_folder_id = '0'  # ルートフォルダのID（「0」はルートフォルダを意味する）
 
-# ファイル名生成
-def generate_db_file_name(base_name='box_files', extension='db', counter=1):
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    return f"{base_name}_{timestamp}_{counter:02d}.{extension}"
+# 認証URLを生成する関数
+def get_auth_url():
+    return f"{auth_url}?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}"
+
+def get_access_token(auth_code):
+    data = {
+        'grant_type': 'authorization_code',
+        'code': auth_code,
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'redirect_uri': redirect_uri
+    }
+    response = requests.post(token_url, data=data)
+    
+    if response.status_code != 200:
+        st.write("アクセストークンの取得に失敗しました。")
+        st.write(f"エラーメッセージ: {response.json().get('error_description')}")
+        return None
+    
+    return response.json().get('access_token')
+
+def get_all_files(access_token, folder_id='0'):
+    files = []
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    url = f'https://api.box.com/2.0/folders/{folder_id}/items'
+    params = {'limit': 1000}
+    response = requests.get(url, headers=headers, params=params)
+    
+    if response.status_code == 200:
+        items = response.json().get('entries', [])
+        for item in items:
+            if item['type'] == 'file':
+                file_info = get_file_info(access_token, item['id'])
+                if file_info:
+                    files.append(file_info)
+            elif item['type'] == 'folder':
+                files.extend(get_all_files(access_token, item['id']))
+    else:
+        st.write("ファイルの取得に失敗しました。")
+    
+    return files
+
+def get_file_info(access_token, file_id):
+    url = f'https://api.box.com/2.0/files/{file_id}'
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        st.write(f"ファイル情報の取得に失敗しました。ファイルID: {file_id}")
+        return None
+
+def filter_images(files):
+    image_extensions = ['.jpg', '.jpeg', '.png', '.gif']
+    return [file for file in files if any(file['name'].lower().endswith(ext) for ext in image_extensions)]
+
+def create_shared_link(access_token, file_id):
+    url = f"https://api.box.com/2.0/files/{file_id}"
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+    data = {
+        "shared_link": {
+            "access": "open"
+        }
+    }
+    response = requests.put(url, headers=headers, json=data)
+    
+    if response.status_code == 200:
+        return response.json()['shared_link']['url']
+    else:
+        st.write(f"共有リンクの作成に失敗しました。ファイルID: {file_id}")
+        return None
 
 def find_existing_files(access_token, base_file_name):
     url = f'https://api.box.com/2.0/search'
@@ -42,6 +116,10 @@ def find_existing_files(access_token, base_file_name):
     else:
         st.write("ファイルの検索に失敗しました。")
         return []
+
+def generate_db_file_name(base_name='box_files', extension='db', counter=1):
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    return f"{base_name}_{timestamp}_{counter:02d}.{extension}"
 
 def get_new_db_file_name(access_token, base_file_name):
     existing_files = find_existing_files(access_token, base_file_name)
@@ -69,6 +147,12 @@ def upload_db_file(access_token, folder_id, file_stream, file_name):
         st.write("データベースファイルがBoxにアップロードされました。")
     else:
         st.write("データベースファイルのアップロードに失敗しました。")
+
+def show_db_content(db_file_path):
+    conn = sqlite3.connect(db_file_path)
+    query = "SELECT name, id, folder_id, created_at, shared_link FROM box_files"
+    df = pd.read_sql_query(query, conn)
+    return df
 
 def main():
     st.title("Box内の画像ファイルをSQLiteに保存")
@@ -140,3 +224,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
