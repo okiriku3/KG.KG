@@ -12,12 +12,10 @@ import pandas as pd
 import tempfile
 from datetime import datetime
 
-
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
-
 
 auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
@@ -27,8 +25,6 @@ def get_file_name_with_date(base_name='box_files'):
     # 現在の年月日を取得し、ファイル名に追加
     today = datetime.now().strftime('%Y%m%d')
     return f"{base_name}_{today}.db"
-
-db_file_name = get_file_name_with_date()  # 日付付きファイル名を取得
 
 def get_auth_url():
     return f"{auth_url}?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}"
@@ -195,11 +191,12 @@ def main():
                 else:
                     image['shared_link'] = 'リンク作成失敗'
 
+            # 既存ファイルの削除処理
+            db_file_name = get_file_name_with_date()  # 日付付きファイル名を取得
             db_file = find_existing_file(access_token, db_file_name)
 
             if db_file:
                 st.write("既存のデータベースを更新します。")
-                # 既存ファイルの削除
                 if delete_existing_file(access_token, db_file["id"]):
                     st.write("既存のファイルを削除しました。")
                 else:
@@ -238,7 +235,7 @@ def main():
 
             with open(db_file_name, 'rb') as f:
                 db_stream = BytesIO(f.read())
-            
+
             upload_db_file(access_token, root_folder_id, db_stream)
             
             df = show_db_content(db_file_path)
