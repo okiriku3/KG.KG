@@ -13,10 +13,10 @@ import tempfile
 import datetime
 import os
 
-# # OAuth 2.0設定
-client_id = st.secrets["CLIENT_ID"]
-client_secret = st.secrets["CLIENT_SECRET"]
-redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
+# OAuth 2.0設定
+client_id = 'YOUR_CLIENT_ID'
+client_secret = 'YOUR_CLIENT_SECRET'
+redirect_uri = 'https://your-app-name.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
 
 auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
@@ -160,6 +160,11 @@ def create_new_db_file():
         conn.close()
         return temp_db.name
 
+def get_temp_db_file(db_stream):
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as temp_db:
+        temp_db.write(db_stream.read())
+        return temp_db.name
+
 def show_db_content(db_file_path):
     conn = sqlite3.connect(db_file_path)
     query = "SELECT name, id, folder_id, created_at, shared_link FROM box_files"
@@ -227,22 +232,20 @@ def main():
                     ))
                 conn.commit()
 
-            with open(db_file_path, 'rb') as f:
-                db_stream = BytesIO(f.read())
             if db_file:
-                update_box_db_file(access_token, db_file['id'], db_stream)
+                with open(db_file_path, 'rb') as file_stream:
+                    update_box_db_file(access_token, db_file['id'], file_stream)
             else:
-                upload_db_to_box(access_token, root_folder_id, db_stream, db_file_name)
+                with open(db_file_path, 'rb') as file_stream:
+                    upload_db_to_box(access_token, root_folder_id, file_stream, db_file_name)
 
-            # アップデート、または新規作成したDBファイル名を表示
-            st.write(f"使用されたデータベースファイル名: {db_file_name}")
+            st.write(f"使用されたDBファイル名: {db_file_name}")
 
             df = show_db_content(db_file_path)
             st.write(df)
 
 if __name__ == "__main__":
     main()
-
 
 
 ################################
