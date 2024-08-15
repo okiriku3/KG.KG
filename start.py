@@ -12,9 +12,9 @@ import pandas as pd
 import tempfile
 
 # OAuth 2.0設定
-client_id = st.secrets["CLIENT_ID"]
-client_secret = st.secrets["CLIENT_SECRET"]
-redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
+client_id = 'YOUR_CLIENT_ID'
+client_secret = 'YOUR_CLIENT_SECRET'
+redirect_uri = 'https://your-app-name.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
 
 auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
@@ -130,14 +130,14 @@ def upload_db_to_box(access_token, folder_id, file_stream):
         st.write(f"データベースファイルのアップロードに失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
 
 def update_box_db_file(access_token, file_id, file_stream):
-    url = f'https://upload.box.com/api/2.0/files/{file_id}/content'
+    url = f'https://api.box.com/2.0/files/{file_id}/content'
     headers = {
         'Authorization': f'Bearer {access_token}'
     }
     files = {
         'file': (db_file_name, file_stream)
     }
-    response = requests.post(url, headers=headers, files=files)
+    response = requests.put(url, headers=headers, files=files)
     if response.status_code == 200:
         st.write("データベースファイルがBoxで更新されました。")
     else:
@@ -205,7 +205,6 @@ def main():
                     )
                 ''')
                 conn.commit()
-                conn.close()
 
                 db_file_path = get_temp_db_file(BytesIO(open(db_file_name, 'rb').read()))
 
