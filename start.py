@@ -116,7 +116,7 @@ def box_db_exists(access_token, db_file_name):
         return None
 
 def upload_db_to_box(access_token, folder_id, file_stream):
-    url = f'https://api.box.com/2.0/files/content'
+    url = f'https://upload.box.com/api/2.0/files/content'
     headers = {
         'Authorization': f'Bearer {access_token}'
     }
@@ -131,7 +131,7 @@ def upload_db_to_box(access_token, folder_id, file_stream):
         st.write(f"データベースファイルのアップロードに失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
 
 def update_box_db_file(access_token, file_id, file_stream):
-    url = f'https://api.box.com/2.0/files/{file_id}/content'
+    url = f'https://upload.box.com/api/2.0/files/{file_id}/content'
     headers = {
         'Authorization': f'Bearer {access_token}'
     }
@@ -156,6 +156,13 @@ def show_db_content(db_file_path):
     df = pd.read_sql_query(query, conn)
     conn.close()
     return df
+
+def upload_or_update_db_file(access_token, folder_id, file_stream):
+    existing_db_file = box_db_exists(access_token, db_file_name)
+    if existing_db_file:
+        update_box_db_file(access_token, existing_db_file['id'], file_stream)
+    else:
+        upload_db_to_box(access_token, folder_id, file_stream)
 
 def main():
     st.title("Box内の画像ファイルをSQLiteに保存")
