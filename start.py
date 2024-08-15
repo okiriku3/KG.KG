@@ -11,6 +11,7 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 
+
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
@@ -114,39 +115,38 @@ def box_db_exists(access_token, db_file_name):
         st.write("Box内のデータベースファイルの検索に失敗しました。")
         return None
 
+def delete_existing_file(access_token, file_id):
+    url = f'https://api.box.com/2.0/files/{file_id}'
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    response = requests.delete(url, headers=headers)
+    if response.status_code == 204:
+        st.write("既存のファイルが削除されました。")
+    else:
+        st.write(f"既存のファイルの削除に失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
+
 def upload_or_update_db_file(access_token, folder_id, file_stream):
     existing_db_file = box_db_exists(access_token, db_file_name)
     
     if existing_db_file:
-        # 更新処理
-        file_id = existing_db_file['id']
-        url = f'https://api.box.com/2.0/files/{file_id}/content'
-        headers = {
-            'Authorization': f'Bearer {access_token}'
-        }
-        files = {
-            'file': (db_file_name, file_stream)
-        }
-        response = requests.post(url, headers=headers, files=files)
-        if response.status_code == 200:
-            st.write("データベースファイルがBoxで更新されました。")
-        else:
-            st.write(f"データベースファイルの更新に失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
+        # 既存ファイルの削除
+        delete_existing_file(access_token, existing_db_file['id'])
+    
+    # アップロード処理
+    url = f'https://upload.box.com/api/2.0/files/content'
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    files = {
+        'attributes': (None, '{"name":"' + db_file_name + '","parent":{"id":"' + folder_id + '"}}'),
+        'file': (db_file_name, file_stream)
+    }
+    response = requests.post(url, headers=headers, files=files)
+    if response.status_code == 201:
+        st.write("データベースファイルがBoxにアップロードされました。")
     else:
-        # アップロード処理
-        url = f'https://upload.box.com/api/2.0/files/content'
-        headers = {
-            'Authorization': f'Bearer {access_token}'
-        }
-        files = {
-            'attributes': (None, '{"name":"' + db_file_name + '","parent":{"id":"' + folder_id + '"}}'),
-            'file': (db_file_name, file_stream)
-        }
-        response = requests.post(url, headers=headers, files=files)
-        if response.status_code == 201:
-            st.write("データベースファイルがBoxにアップロードされました。")
-        else:
-            st.write(f"データベースファイルのアップロードに失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
+        st.write(f"データベースファイルのアップロードに失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
 
 def get_temp_db_file(db_stream):
     with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as temp_db:
@@ -230,11 +230,12 @@ def main():
 
             with open(db_file_name, 'rb') as f:
                 db_stream = BytesIO(f.read())
+            
             upload_or_update_db_file(access_token, root_folder_id, db_stream)
 
             st.write("画像ファイルの情報をデータベースに保存しました。")
 
-            # データベースの内容を表示
+            st.write("データベースの内容を表示します。")
             df = show_db_content(db_file_path)
             st.write(df)
 
