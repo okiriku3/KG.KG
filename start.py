@@ -12,6 +12,7 @@ import pandas as pd
 import tempfile
 from datetime import datetime
 
+
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
@@ -137,7 +138,7 @@ def delete_existing_file(access_token, file_id):
         st.write(f"既存のファイルの削除に失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
         return False
 
-def upload_db_file(access_token, folder_id, file_stream):
+def upload_db_file(access_token, folder_id, file_stream, db_file_name):
     url = f'https://upload.box.com/api/2.0/files/content'
     headers = {
         'Authorization': f'Bearer {access_token}'
@@ -236,7 +237,7 @@ def main():
             with open(db_file_name, 'rb') as f:
                 db_stream = BytesIO(f.read())
 
-            upload_db_file(access_token, root_folder_id, db_stream)
+            upload_db_file(access_token, root_folder_id, db_stream, db_file_name)
             
             df = show_db_content(db_file_path)
             st.dataframe(df)
