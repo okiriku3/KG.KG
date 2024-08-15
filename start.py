@@ -10,18 +10,25 @@ import sqlite3
 from io import BytesIO
 import pandas as pd
 import tempfile
+from datetime import datetime
 
 
-# # OAuth 2.0設定
+# OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
+
 
 auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
 root_folder_id = '0'  # ルートフォルダのID（「0」はルートフォルダを意味する）
 
-db_file_name = 'box_files.db'  # Box内でのSQLiteデータベースファイル名
+def get_file_name_with_date(base_name='box_files'):
+    # 現在の年月日を取得し、ファイル名に追加
+    today = datetime.now().strftime('%Y%m%d')
+    return f"{base_name}_{today}.db"
+
+db_file_name = get_file_name_with_date()  # 日付付きファイル名を取得
 
 def get_auth_url():
     return f"{auth_url}?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}"
@@ -233,12 +240,13 @@ def main():
                 db_stream = BytesIO(f.read())
             
             upload_db_file(access_token, root_folder_id, db_stream)
-
-            st.write("画像ファイルの情報をデータベースに保存しました。")
-
+            
             df = show_db_content(db_file_path)
             st.dataframe(df)
+        else:
+            st.write("アクセストークンの取得に失敗しました。")
+    else:
+        st.write("認証コードが見つかりません。")
 
 if __name__ == "__main__":
     main()
-
