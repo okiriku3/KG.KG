@@ -11,7 +11,7 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 import datetime
-
+import os
 
 # # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
@@ -143,16 +143,28 @@ def update_box_db_file(access_token, file_id, file_stream):
     else:
         st.write(f"データベースファイルの更新に失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
 
-def get_temp_db_file(db_stream):
+def create_new_db_file():
     with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as temp_db:
-        temp_db.write(db_stream.getvalue())
-        temp_db.flush()
+        conn = sqlite3.connect(temp_db.name)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS box_files (
+                id TEXT PRIMARY KEY,
+                name TEXT,
+                folder_id TEXT,
+                created_at TEXT,
+                shared_link TEXT
+            )
+        ''')
+        conn.commit()
+        conn.close()
         return temp_db.name
 
 def show_db_content(db_file_path):
     conn = sqlite3.connect(db_file_path)
     query = "SELECT name, id, folder_id, created_at, shared_link FROM box_files"
     df = pd.read_sql_query(query, conn)
+    conn.close()
     return df
 
 def generate_db_file_name(base_name="box_files"):
@@ -198,20 +210,7 @@ def main():
                 db_file_path = get_temp_db_file(db_stream)
             else:
                 st.write("新しいデータベースを作成します。")
-                conn = sqlite3.connect(db_file_name)
-                cursor = conn.cursor()
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS box_files (
-                        id TEXT PRIMARY KEY,
-                        name TEXT,
-                        folder_id TEXT,
-                        created_at TEXT,
-                        shared_link TEXT
-                    )
-                ''')
-                conn.commit()
-
-                db_file_path = get_temp_db_file(BytesIO(open(db_file_name, 'rb').read()))
+                db_file_path = create_new_db_file()
 
             with sqlite3.connect(db_file_path) as conn:
                 cursor = conn.cursor()
@@ -228,7 +227,7 @@ def main():
                     ))
                 conn.commit()
 
-            with open(db_file_name, 'rb') as f:
+            with open(db_file_path, 'rb') as f:
                 db_stream = BytesIO(f.read())
             if db_file:
                 update_box_db_file(access_token, db_file['id'], db_stream)
@@ -238,16 +237,12 @@ def main():
             # アップデート、または新規作成したDBファイル名を表示
             st.write(f"使用されたデータベースファイル名: {db_file_name}")
 
-            st.write("画像ファイルの情報をデータベースに保存しました。")
-
-            if st.button('Show Box Files DB'):
-                st.write("データベースの内容を表示します。")
-                
-                df = show_db_content(db_file_path)
-                st.write(df)
+            df = show_db_content(db_file_path)
+            st.write(df)
 
 if __name__ == "__main__":
     main()
+
 
 
 ################################
