@@ -11,7 +11,6 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 
-
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
@@ -128,7 +127,7 @@ def upload_or_update_db_file(access_token, folder_id, file_stream):
         files = {
             'file': (db_file_name, file_stream)
         }
-        response = requests.put(url, headers=headers, files=files)
+        response = requests.post(url, headers=headers, files=files)
         if response.status_code == 200:
             st.write("データベースファイルがBoxで更新されました。")
         else:
