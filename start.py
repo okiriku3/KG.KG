@@ -11,7 +11,7 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 
-# # OAuth 2.0設定
+# OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
@@ -101,12 +101,17 @@ def create_shared_link(access_token, file_id):
         st.write(f"共有リンクの作成に失敗しました。ファイルID: {file_id}")
         return None
 
-def box_db_exists(access_token, db_file_name):
-    url = f'https://api.box.com/2.0/search?query={db_file_name}&file_extensions=db'
+def find_existing_file(access_token, db_file_name):
+    url = f'https://api.box.com/2.0/search'
     headers = {
         'Authorization': f'Bearer {access_token}'
     }
-    response = requests.get(url, headers=headers)
+    params = {
+        'query': db_file_name,
+        'file_extensions': 'db'
+    }
+    response = requests.get(url, headers=headers, params=params)
+    
     if response.status_code == 200:
         files = response.json().get('entries', [])
         return files[0] if files else None
@@ -180,37 +185,29 @@ def main():
                 else:
                     image['shared_link'] = 'リンク作成失敗'
 
-            db_file = box_db_exists(access_token, db_file_name)
+            db_file = find_existing_file(access_token, db_file_name)
 
             if db_file:
                 st.write("既存のデータベースを更新します。")
-                url = f'https://api.box.com/2.0/files/{db_file["id"]}/content'
-                headers = {
-                    'Authorization': f'Bearer {access_token}'
-                }
-                response = requests.get(url, headers=headers)
-                db_stream = BytesIO(response.content)
-                db_file_path = get_temp_db_file(db_stream)
-                
                 # 既存ファイルの削除
                 if not delete_existing_file(access_token, db_file["id"]):
                     st.write("既存のファイルの削除に失敗したため、アップロードを中止します。")
                     return
-            else:
-                st.write("新しいデータベースを作成します。")
-                conn = sqlite3.connect(db_file_name)
-                cursor = conn.cursor()
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS box_files (
-                        id TEXT PRIMARY KEY,
-                        name TEXT,
-                        folder_id TEXT,
-                        created_at TEXT,
-                        shared_link TEXT
-                    )
-                ''')
-                conn.commit()
-                db_file_path = get_temp_db_file(BytesIO(open(db_file_name, 'rb').read()))
+
+            # 新しいデータベースファイルの作成
+            conn = sqlite3.connect(db_file_name)
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS box_files (
+                    id TEXT PRIMARY KEY,
+                    name TEXT,
+                    folder_id TEXT,
+                    created_at TEXT,
+                    shared_link TEXT
+                )
+            ''')
+            conn.commit()
+            db_file_path = get_temp_db_file(BytesIO(open(db_file_name, 'rb').read()))
 
             with sqlite3.connect(db_file_path) as conn:
                 cursor = conn.cursor()
