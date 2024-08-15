@@ -10,9 +10,10 @@ import sqlite3
 from io import BytesIO
 import pandas as pd
 import tempfile
-from PIL import Image
 
-# # OAuth 2.0設定
+
+
+# OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
@@ -156,19 +157,6 @@ def show_db_content(db_file_path):
     df = pd.read_sql_query(query, conn)
     return df
 
-def show_all_images(files):
-    for file in files:
-        if file['name'].lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
-            file_id = file['id']
-            download_url = f'https://api.box.com/2.0/files/{file_id}/content'
-            response = requests.get(download_url, headers={'Authorization': f'Bearer {access_token}'})
-            
-            if response.status_code == 200:
-                image = Image.open(BytesIO(response.content))
-                st.image(image, caption=file['name'])
-            else:
-                st.write(f"画像の取得に失敗しました。ファイルID: {file_id}")
-
 def main():
     st.title("Box内の画像ファイルをSQLiteに保存")
 
@@ -246,9 +234,6 @@ def main():
 
             st.write("画像ファイルの情報をデータベースに保存しました。")
 
-            st.write("Box内の全ての画像ファイルを表示します。")
-            show_all_images(images)
-
             if st.button('Show Box Files DB'):
                 st.write("データベースの内容を表示します。")
                 
@@ -257,4 +242,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
