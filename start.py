@@ -11,7 +11,8 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 
-# OAuth 2.0設定
+
+# # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
@@ -125,6 +126,7 @@ def delete_existing_file(access_token, file_id):
         'Authorization': f'Bearer {access_token}'
     }
     response = requests.delete(url, headers=headers)
+    
     if response.status_code == 204:
         st.write("既存のファイルが削除されました。")
         return True
@@ -142,6 +144,7 @@ def upload_db_file(access_token, folder_id, file_stream):
         'file': (db_file_name, file_stream)
     }
     response = requests.post(url, headers=headers, files=files)
+    
     if response.status_code == 201:
         st.write("データベースファイルがBoxにアップロードされました。")
     else:
@@ -190,8 +193,10 @@ def main():
             if db_file:
                 st.write("既存のデータベースを更新します。")
                 # 既存ファイルの削除
-                if not delete_existing_file(access_token, db_file["id"]):
-                    st.write("既存のファイルの削除に失敗したため、アップロードを中止します。")
+                if delete_existing_file(access_token, db_file["id"]):
+                    st.write("既存のファイルを削除しました。")
+                else:
+                    st.write("既存のファイルの削除に失敗しました。アップロードを中止します。")
                     return
 
             # 新しいデータベースファイルの作成
@@ -231,9 +236,9 @@ def main():
 
             st.write("画像ファイルの情報をデータベースに保存しました。")
 
-            st.write("データベースの内容を表示します。")
             df = show_db_content(db_file_path)
-            st.write(df)
+            st.dataframe(df)
 
 if __name__ == "__main__":
     main()
+
