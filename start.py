@@ -10,9 +10,9 @@ import sqlite3
 from io import BytesIO
 import pandas as pd
 import tempfile
+from PIL import Image
 
-
-# OAuth 2.0設定
+# # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
@@ -42,18 +42,6 @@ def get_access_token(auth_code):
         return None
     
     return response.json().get('access_token')
-
-def search_box_files(access_token, query):
-    url = f'https://api.box.com/2.0/search?query={query}&file_extensions=db'
-    headers = {
-        'Authorization': f'Bearer {access_token}'
-    }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.json().get('entries', [])
-    else:
-        st.write("Boxファイルの検索に失敗しました。")
-        return []
 
 def get_all_files(access_token, folder_id='0'):
     files = []
@@ -115,8 +103,17 @@ def create_shared_link(access_token, file_id):
         return None
 
 def box_db_exists(access_token, db_file_name):
-    files = search_box_files(access_token, db_file_name)
-    return files[0] if files else None
+    url = f'https://api.box.com/2.0/search?query={db_file_name}&file_extensions=db'
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        files = response.json().get('entries', [])
+        return files[0] if files else None
+    else:
+        st.write("Box内のデータベースファイルの検索に失敗しました。")
+        return None
 
 def upload_db_to_box(access_token, folder_id, file_stream):
     url = f'https://upload.box.com/api/2.0/files/content'
@@ -158,6 +155,19 @@ def show_db_content(db_file_path):
     query = "SELECT name, id, folder_id, created_at, shared_link FROM box_files"
     df = pd.read_sql_query(query, conn)
     return df
+
+def show_all_images(files):
+    for file in files:
+        if file['name'].lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
+            file_id = file['id']
+            download_url = f'https://api.box.com/2.0/files/{file_id}/content'
+            response = requests.get(download_url, headers={'Authorization': f'Bearer {access_token}'})
+            
+            if response.status_code == 200:
+                image = Image.open(BytesIO(response.content))
+                st.image(image, caption=file['name'])
+            else:
+                st.write(f"画像の取得に失敗しました。ファイルID: {file_id}")
 
 def main():
     st.title("Box内の画像ファイルをSQLiteに保存")
@@ -236,6 +246,9 @@ def main():
 
             st.write("画像ファイルの情報をデータベースに保存しました。")
 
+            st.write("Box内の全ての画像ファイルを表示します。")
+            show_all_images(images)
+
             if st.button('Show Box Files DB'):
                 st.write("データベースの内容を表示します。")
                 
@@ -244,3 +257,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
