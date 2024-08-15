@@ -11,7 +11,6 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 
-
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
@@ -123,15 +122,19 @@ def delete_existing_file(access_token, file_id):
     response = requests.delete(url, headers=headers)
     if response.status_code == 204:
         st.write("既存のファイルが削除されました。")
+        return True
     else:
         st.write(f"既存のファイルの削除に失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
+        return False
 
 def upload_or_update_db_file(access_token, folder_id, file_stream):
     existing_db_file = box_db_exists(access_token, db_file_name)
     
     if existing_db_file:
         # 既存ファイルの削除
-        delete_existing_file(access_token, existing_db_file['id'])
+        if not delete_existing_file(access_token, existing_db_file['id']):
+            st.write("既存のファイルの削除に失敗したため、アップロードを中止します。")
+            return
     
     # アップロード処理
     url = f'https://upload.box.com/api/2.0/files/content'
