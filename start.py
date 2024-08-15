@@ -11,8 +11,7 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 
-
-# OAuth 2.0設定
+OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
@@ -155,6 +154,10 @@ def show_db_content(db_file_path):
     query = "SELECT name, id, folder_id, created_at, shared_link FROM box_files"
     df = pd.read_sql_query(query, conn)
     conn.close()
+    
+    # shared_linkをクリック可能なリンクに変換
+    df['shared_link'] = df['shared_link'].apply(lambda x: f'<a href="{x}" target="_blank">リンク</a>' if x else 'リンク作成失敗')
+    
     return df
 
 def main():
@@ -237,7 +240,7 @@ def main():
 
             # データベースの内容を表示
             df = show_db_content(db_file_path)
-            st.write(df)
+            st.markdown(df.to_html(escape=False), unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
