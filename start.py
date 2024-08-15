@@ -160,7 +160,9 @@ def show_db_content(db_file_path):
 def main():
     st.title("Box内の画像ファイルをSQLiteに保存")
 
-    # 認証コードを取得してアクセストークンを取得
+    auth_url = get_auth_url()
+    st.markdown(f"[Boxで認証するにはここをクリックしてください]({auth_url})")
+
     query_params = st.experimental_get_query_params()
     auth_code = query_params.get('code', [None])[0]
 
@@ -170,7 +172,6 @@ def main():
         if access_token:
             st.write("認証成功！")
 
-            # Boxから画像ファイルの情報を取得
             files = get_all_files(access_token, root_folder_id)
             images = filter_images(files)
 
@@ -181,7 +182,6 @@ def main():
                 else:
                     image['shared_link'] = 'リンク作成失敗'
 
-            # データベースの更新または作成
             db_file = box_db_exists(access_token, db_file_name)
 
             if db_file:
