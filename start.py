@@ -11,7 +11,6 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 
-
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
@@ -119,7 +118,8 @@ def upload_or_update_db_file(access_token, folder_id, file_stream):
     existing_db_file = box_db_exists(access_token, db_file_name)
     if existing_db_file:
         # 更新
-        url = f'https://upload.box.com/api/2.0/files/{existing_db_file["id"]}/content'
+        file_id = existing_db_file['id']
+        url = f'https://api.box.com/2.0/files/{file_id}/content'
         headers = {
             'Authorization': f'Bearer {access_token}'
         }
