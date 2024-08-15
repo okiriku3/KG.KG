@@ -50,19 +50,25 @@ def get_all_files(access_token, folder_id='0'):
     }
     url = f'https://api.box.com/2.0/folders/{folder_id}/items'
     params = {'limit': 1000}
-    response = requests.get(url, headers=headers, params=params)
     
-    if response.status_code == 200:
-        items = response.json().get('entries', [])
-        for item in items:
-            if item['type'] == 'file':
-                file_info = get_file_info(access_token, item['id'])
-                if file_info:
-                    files.append(file_info)
-            elif item['type'] == 'folder':
-                files.extend(get_all_files(access_token, item['id']))
-    else:
-        st.write("ファイルの取得に失敗しました。")
+    while url:
+        response = requests.get(url, headers=headers, params=params)
+        
+        if response.status_code == 200:
+            data = response.json()
+            items = data.get('entries', [])
+            for item in items:
+                if item['type'] == 'file':
+                    file_info = get_file_info(access_token, item['id'])
+                    if file_info:
+                        files.append(file_info)
+                elif item['type'] == 'folder':
+                    files.extend(get_all_files(access_token, item['id']))
+            
+            url = data.get('next_page', None)  # ページネーションの処理
+        else:
+            st.write("ファイルの取得に失敗しました。")
+            url = None  # エラーが発生した場合はループを終了
     
     return files
 
@@ -131,7 +137,7 @@ def upload_db_to_box(access_token, folder_id, file_stream):
         st.write(f"データベースファイルのアップロードに失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
 
 def update_box_db_file(access_token, file_id, file_stream):
-    url = f'https://api.box.com/2.0/files/{file_id}/content'
+    url = f'https://upload.box.com/api/2.0/files/{file_id}/content'
     headers = {
         'Authorization': f'Bearer {access_token}'
     }
@@ -206,7 +212,6 @@ def main():
                     )
                 ''')
                 conn.commit()
-
                 db_file_path = get_temp_db_file(BytesIO(open(db_file_name, 'rb').read()))
 
             with sqlite3.connect(db_file_path) as conn:
