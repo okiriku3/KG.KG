@@ -12,9 +12,9 @@ import pandas as pd
 import tempfile
 
 # OAuth 2.0設定
-client_id = st.secrets["CLIENT_ID"]
-client_secret = st.secrets["CLIENT_SECRET"]
-redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
+client_id = 'YOUR_CLIENT_ID'
+client_secret = 'YOUR_CLIENT_SECRET'
+redirect_uri = 'https://your-app-name.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
 
 auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
@@ -153,14 +153,13 @@ def show_db_content(db_file_path):
     conn = sqlite3.connect(db_file_path)
     query = "SELECT name, id, folder_id, created_at, shared_link FROM box_files"
     df = pd.read_sql_query(query, conn)
+    conn.close()
     return df
 
 def main():
     st.title("Box内の画像ファイルをSQLiteに保存")
 
-    auth_url = get_auth_url()
-    st.markdown(f"[Boxで認証するにはここをクリックしてください]({auth_url})")
-
+    # 認証コードを取得してアクセストークンを取得
     query_params = st.experimental_get_query_params()
     auth_code = query_params.get('code', [None])[0]
 
@@ -170,6 +169,7 @@ def main():
         if access_token:
             st.write("認証成功！")
 
+            # Boxから画像ファイルの情報を取得
             files = get_all_files(access_token, root_folder_id)
             images = filter_images(files)
 
@@ -180,6 +180,7 @@ def main():
                 else:
                     image['shared_link'] = 'リンク作成失敗'
 
+            # データベースの更新または作成
             db_file = box_db_exists(access_token, db_file_name)
 
             if db_file:
@@ -205,6 +206,7 @@ def main():
                     )
                 ''')
                 conn.commit()
+                conn.close()
 
                 db_file_path = get_temp_db_file(BytesIO(open(db_file_name, 'rb').read()))
 
@@ -232,11 +234,9 @@ def main():
 
             st.write("画像ファイルの情報をデータベースに保存しました。")
 
-            if st.button('Show Box Files DB'):
-                st.write("データベースの内容を表示します。")
-                
-                df = show_db_content(db_file_path)
-                st.write(df)
+            # データベースの内容を表示
+            df = show_db_content(db_file_path)
+            st.write(df)
 
 if __name__ == "__main__":
     main()
