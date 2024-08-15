@@ -119,7 +119,7 @@ def upload_or_update_db_file(access_token, folder_id, file_stream):
     existing_db_file = box_db_exists(access_token, db_file_name)
     
     if existing_db_file:
-        # 更新
+        # 更新処理
         file_id = existing_db_file['id']
         url = f'https://api.box.com/2.0/files/{file_id}/content'
         headers = {
@@ -128,13 +128,13 @@ def upload_or_update_db_file(access_token, folder_id, file_stream):
         files = {
             'file': (db_file_name, file_stream)
         }
-        response = requests.put(url, headers=headers, files=files)  # PUTリクエストに変更
+        response = requests.put(url, headers=headers, files=files)
         if response.status_code == 200:
             st.write("データベースファイルがBoxで更新されました。")
         else:
             st.write(f"データベースファイルの更新に失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
     else:
-        # アップロード
+        # アップロード処理
         url = f'https://upload.box.com/api/2.0/files/content'
         headers = {
             'Authorization': f'Bearer {access_token}'
@@ -241,4 +241,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
