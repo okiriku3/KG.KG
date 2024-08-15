@@ -364,6 +364,9 @@
 #     main()
 
 ################
+
+
+############
 import streamlit as st
 import requests
 from io import BytesIO
@@ -373,9 +376,6 @@ from PIL import Image
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
-
-
-# あなたのStreamlitアプリのリダイレクトURIを指定
 
 auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
@@ -474,19 +474,23 @@ def main():
                 st.write("### 画像ファイル一覧")
                 
                 # 表のヘッダーを表示
-                cols = st.columns([2, 2, 3])
+                cols = st.columns([2, 2, 2, 2, 3])
                 cols[0].write("**ファイル名**")
                 cols[1].write("**ファイルID**")
-                cols[2].write("**画像プレビュー**")
+                cols[2].write("**フォルダID**")
+                cols[3].write("**ファイル作成日**")
+                cols[4].write("**画像プレビュー**")
                 
                 # 各画像ファイルを表に表示
                 for image in images:
-                    cols = st.columns([2, 2, 3])
+                    cols = st.columns([2, 2, 2, 2, 3])
                     cols[0].write(image['name'])
                     cols[1].write(image['id'])
+                    cols[2].write(image['parent']['id'])  # フォルダIDを表示
+                    cols[3].write(image['created_at'])  # ファイル作成日を表示
                     image_pil = get_image_pil(access_token, image['id'])
                     if image_pil:
-                        cols[2].image(image_pil, caption=image['name'], use_column_width=True)
+                        cols[4].image(image_pil, caption=image['name'], use_column_width=True)
             else:
                 st.write("画像ファイルが見つかりませんでした。")
         else:
