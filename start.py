@@ -101,6 +101,26 @@ def get_image_pil(access_token, file_id):
         st.write(f"画像の取得に失敗しました。ファイルID: {file_id}")
         return None
 
+# 共有リンクを生成
+def create_shared_link(access_token, file_id):
+    url = f"https://api.box.com/2.0/files/{file_id}"
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+    data = {
+        "shared_link": {
+            "access": "open"
+        }
+    }
+    response = requests.put(url, headers=headers, json=data)
+    
+    if response.status_code == 200:
+        return response.json()['shared_link']['url']
+    else:
+        st.write(f"共有リンクの作成に失敗しました。ファイルID: {file_id}")
+        return None
+
 def main():
     st.title("Box内の画像ファイル一覧")
 
@@ -128,16 +148,17 @@ def main():
                 st.write("### 画像ファイル一覧")
                 
                 # 表のヘッダーを表示
-                cols = st.columns([2, 2, 2, 2, 3])
+                cols = st.columns([2, 2, 2, 2, 3, 2])
                 cols[0].write("**ファイル名**")
                 cols[1].write("**ファイルID**")
                 cols[2].write("**フォルダID**")
                 cols[3].write("**ファイル作成日**")
                 cols[4].write("**画像プレビュー**")
+                cols[5].write("**共有リンク**")
                 
                 # 各画像ファイルを表に表示
                 for image in images:
-                    cols = st.columns([2, 2, 2, 2, 3])
+                    cols = st.columns([2, 2, 2, 2, 3, 2])
                     cols[0].write(image['name'])
                     cols[1].write(image['id'])
                     cols[2].write(image['parent']['id'])  # フォルダIDを表示
@@ -145,6 +166,10 @@ def main():
                     image_pil = get_image_pil(access_token, image['id'])
                     if image_pil:
                         cols[4].image(image_pil, caption=image['name'], use_column_width=True)
+                    # 共有リンクの作成
+                    shared_link = create_shared_link(access_token, image['id'])
+                    if shared_link:
+                        cols[5].markdown(f"[リンク]({shared_link})")
             else:
                 st.write("画像ファイルが見つかりませんでした。")
         else:
