@@ -11,7 +11,7 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 
-# OAuth 2.0設定
+# # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
@@ -127,16 +127,7 @@ def delete_existing_file(access_token, file_id):
         st.write(f"既存のファイルの削除に失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
         return False
 
-def upload_or_update_db_file(access_token, folder_id, file_stream):
-    existing_db_file = box_db_exists(access_token, db_file_name)
-    
-    if existing_db_file:
-        # 既存ファイルの削除
-        if not delete_existing_file(access_token, existing_db_file['id']):
-            st.write("既存のファイルの削除に失敗したため、アップロードを中止します。")
-            return
-    
-    # アップロード処理
+def upload_db_file(access_token, folder_id, file_stream):
     url = f'https://upload.box.com/api/2.0/files/content'
     headers = {
         'Authorization': f'Bearer {access_token}'
@@ -200,6 +191,11 @@ def main():
                 response = requests.get(url, headers=headers)
                 db_stream = BytesIO(response.content)
                 db_file_path = get_temp_db_file(db_stream)
+                
+                # 既存ファイルの削除
+                if not delete_existing_file(access_token, db_file["id"]):
+                    st.write("既存のファイルの削除に失敗したため、アップロードを中止します。")
+                    return
             else:
                 st.write("新しいデータベースを作成します。")
                 conn = sqlite3.connect(db_file_name)
@@ -234,7 +230,7 @@ def main():
             with open(db_file_name, 'rb') as f:
                 db_stream = BytesIO(f.read())
             
-            upload_or_update_db_file(access_token, root_folder_id, db_stream)
+            upload_db_file(access_token, root_folder_id, db_stream)
 
             st.write("画像ファイルの情報をデータベースに保存しました。")
 
