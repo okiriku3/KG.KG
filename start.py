@@ -9,6 +9,7 @@ import requests
 from io import BytesIO
 from PIL import Image
 
+
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
@@ -148,7 +149,7 @@ def main():
                 st.write("### 画像ファイル一覧")
                 
                 # 表のヘッダーを表示
-                cols = st.columns([2, 2, 2, 2, 3, 2])
+                cols = st.columns([2, 2, 2, 2, 3, 3])
                 cols[0].write("**ファイル名**")
                 cols[1].write("**ファイルID**")
                 cols[2].write("**フォルダID**")
@@ -158,7 +159,7 @@ def main():
                 
                 # 各画像ファイルを表に表示
                 for image in images:
-                    cols = st.columns([2, 2, 2, 2, 3, 2])
+                    cols = st.columns([2, 2, 2, 2, 3, 3])
                     cols[0].write(image['name'])
                     cols[1].write(image['id'])
                     cols[2].write(image['parent']['id'])  # フォルダIDを表示
@@ -169,7 +170,7 @@ def main():
                     # 共有リンクの作成
                     shared_link = create_shared_link(access_token, image['id'])
                     if shared_link:
-                        cols[5].markdown(f"[リンク]({shared_link})")
+                        cols[5].write(shared_link)  # 共有リンクを省略せずに表示
             else:
                 st.write("画像ファイルが見つかりませんでした。")
         else:
@@ -177,3 +178,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+
