@@ -12,7 +12,7 @@ import pandas as pd
 import tempfile
 
 
-# # OAuth 2.0設定
+# OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
@@ -50,25 +50,19 @@ def get_all_files(access_token, folder_id='0'):
     }
     url = f'https://api.box.com/2.0/folders/{folder_id}/items'
     params = {'limit': 1000}
+    response = requests.get(url, headers=headers, params=params)
     
-    while url:
-        response = requests.get(url, headers=headers, params=params)
-        
-        if response.status_code == 200:
-            data = response.json()
-            items = data.get('entries', [])
-            for item in items:
-                if item['type'] == 'file':
-                    file_info = get_file_info(access_token, item['id'])
-                    if file_info:
-                        files.append(file_info)
-                elif item['type'] == 'folder':
-                    files.extend(get_all_files(access_token, item['id']))
-            
-            url = data.get('next_page', None)  # ページネーションの処理
-        else:
-            st.write("ファイルの取得に失敗しました。")
-            url = None  # エラーが発生した場合はループを終了
+    if response.status_code == 200:
+        items = response.json().get('entries', [])
+        for item in items:
+            if item['type'] == 'file':
+                file_info = get_file_info(access_token, item['id'])
+                if file_info:
+                    files.append(file_info)
+            elif item['type'] == 'folder':
+                files.extend(get_all_files(access_token, item['id']))
+    else:
+        st.write("ファイルの取得に失敗しました。")
     
     return files
 
@@ -122,7 +116,7 @@ def box_db_exists(access_token, db_file_name):
         return None
 
 def upload_db_to_box(access_token, folder_id, file_stream):
-    url = f'https://upload.box.com/api/2.0/files/content'
+    url = f'https://api.box.com/2.0/files/content'
     headers = {
         'Authorization': f'Bearer {access_token}'
     }
@@ -137,7 +131,7 @@ def upload_db_to_box(access_token, folder_id, file_stream):
         st.write(f"データベースファイルのアップロードに失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
 
 def update_box_db_file(access_token, file_id, file_stream):
-    url = f'https://upload.box.com/api/2.0/files/{file_id}/content'
+    url = f'https://api.box.com/2.0/files/{file_id}/content'
     headers = {
         'Authorization': f'Bearer {access_token}'
     }
@@ -160,6 +154,7 @@ def show_db_content(db_file_path):
     conn = sqlite3.connect(db_file_path)
     query = "SELECT name, id, folder_id, created_at, shared_link FROM box_files"
     df = pd.read_sql_query(query, conn)
+    conn.close()
     return df
 
 def main():
@@ -231,10 +226,7 @@ def main():
 
             with open(db_file_name, 'rb') as f:
                 db_stream = BytesIO(f.read())
-            if db_file:
-                update_box_db_file(access_token, db_file['id'], db_stream)
-            else:
-                upload_db_to_box(access_token, root_folder_id, db_stream)
+            upload_or_update_db_file(access_token, root_folder_id, db_stream)
 
             st.write("画像ファイルの情報をデータベースに保存しました。")
 
