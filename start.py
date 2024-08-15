@@ -8,6 +8,7 @@ import streamlit as st
 import requests
 import sqlite3
 from io import BytesIO
+import pandas as pd
 
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
@@ -242,6 +243,24 @@ def main():
                 upload_db_to_box(access_token, root_folder_id, db_stream)
 
             st.write("画像ファイルの情報をデータベースに保存しました。")
-    
+
+            # DBの内容を表示するボタンを作成
+            if st.button('Show Box Files DB'):
+                st.write("データベースの内容を表示します。")
+                
+                # データベースファイルをBoxから取得
+                url = f'https://api.box.com/2.0/files/{db_file["id"]}/content'
+                headers = {
+                    'Authorization': f'Bearer {access_token}'
+                }
+                response = requests.get(url, headers=headers)
+                
+                # DBを読み込み
+                with BytesIO(response.content) as db_stream:
+                    conn = sqlite3.connect(db_stream)
+                    query = "SELECT name, id, folder_id, created_at, shared_link FROM box_files"
+                    df = pd.read_sql_query(query, conn)
+                    st.write(df)
+
 if __name__ == "__main__":
     main()
