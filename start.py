@@ -116,6 +116,7 @@ def box_db_exists(access_token, db_file_name):
 
 def upload_or_update_db_file(access_token, folder_id, file_stream):
     existing_db_file = box_db_exists(access_token, db_file_name)
+    
     if existing_db_file:
         # 更新
         file_id = existing_db_file['id']
@@ -126,7 +127,7 @@ def upload_or_update_db_file(access_token, folder_id, file_stream):
         files = {
             'file': (db_file_name, file_stream)
         }
-        response = requests.post(url, headers=headers, files=files)
+        response = requests.put(url, headers=headers, files=files)  # PUTリクエストに変更
         if response.status_code == 200:
             st.write("データベースファイルがBoxで更新されました。")
         else:
@@ -229,10 +230,12 @@ def main():
 
             with open(db_file_path, 'rb') as f:
                 db_stream = BytesIO(f.read())
+
             upload_or_update_db_file(access_token, root_folder_id, db_stream)
 
             st.write("画像ファイルの情報をデータベースに保存しました。")
 
+            # データベースの内容を表示
             df = show_db_content(db_file_path)
             st.write(df)
 
