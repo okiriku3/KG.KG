@@ -9,11 +9,10 @@ import requests
 import sqlite3
 from io import BytesIO
 
-
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
-redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
+redirect_uri = 'https://kgkgkg.strea
 
 auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
@@ -238,4 +237,11 @@ def main():
             with open(db_file_name, 'rb') as f:
                 db_stream = BytesIO(f.read())
             if db_file:
-                update_box_db_file
+                update_box_db_file(access_token, db_file['id'], db_stream)
+            else:
+                upload_db_to_box(access_token, root_folder_id, db_stream)
+
+            st.write("画像ファイルの情報をデータベースに保存しました。")
+    
+if __name__ == "__main__":
+    main()
