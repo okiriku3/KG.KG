@@ -11,6 +11,7 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 
+
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
@@ -228,9 +229,8 @@ def main():
                     ))
                 conn.commit()
 
-            with open(db_file_path, 'rb') as f:
+            with open(db_file_name, 'rb') as f:
                 db_stream = BytesIO(f.read())
-
             upload_or_update_db_file(access_token, root_folder_id, db_stream)
 
             st.write("画像ファイルの情報をデータベースに保存しました。")
@@ -241,3 +241,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
