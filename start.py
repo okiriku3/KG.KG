@@ -11,8 +11,6 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 
-
-
 # OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
