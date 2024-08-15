@@ -11,7 +11,7 @@ from io import BytesIO
 import pandas as pd
 import tempfile
 
-#OAuth 2.0設定
+# OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
@@ -127,7 +127,7 @@ def upload_db_to_box(access_token, folder_id, file_stream):
     if response.status_code == 201:
         st.write("データベースファイルがBoxにアップロードされました。")
     else:
-        st.write("データベースファイルのアップロードに失敗しました。")
+        st.write(f"データベースファイルのアップロードに失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
 
 def update_box_db_file(access_token, file_id, file_stream):
     url = f'https://upload.box.com/api/2.0/files/{file_id}/content'
@@ -138,10 +138,10 @@ def update_box_db_file(access_token, file_id, file_stream):
         'file': (db_file_name, file_stream)
     }
     response = requests.post(url, headers=headers, files=files)
-    if response.status_code == 201:
+    if response.status_code == 200:
         st.write("データベースファイルがBoxで更新されました。")
     else:
-        st.write("データベースファイルの更新に失敗しました。")
+        st.write(f"データベースファイルの更新に失敗しました。ステータスコード: {response.status_code}, レスポンス: {response.text}")
 
 def get_temp_db_file(db_stream):
     with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as temp_db:
@@ -153,11 +153,6 @@ def show_db_content(db_file_path):
     conn = sqlite3.connect(db_file_path)
     query = "SELECT name, id, folder_id, created_at, shared_link FROM box_files"
     df = pd.read_sql_query(query, conn)
-    conn.close()
-    
-    # shared_linkをクリック可能なリンクに変換
-    df['shared_link'] = df['shared_link'].apply(lambda x: f'<a href="{x}" target="_blank">リンク</a>' if x else 'リンク作成失敗')
-    
     return df
 
 def main():
@@ -238,9 +233,8 @@ def main():
 
             st.write("画像ファイルの情報をデータベースに保存しました。")
 
-            # データベースの内容を表示
             df = show_db_content(db_file_path)
-            st.markdown(df.to_html(escape=False), unsafe_allow_html=True)
+            st.write(df)
 
 if __name__ == "__main__":
     main()
