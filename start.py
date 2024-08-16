@@ -257,12 +257,10 @@ import tempfile
 import datetime
 import os
 
-
-# # OAuth 2.0設定
+# OAuth 2.0設定
 client_id = st.secrets["CLIENT_ID"]
 client_secret = st.secrets["CLIENT_SECRET"]
 redirect_uri = 'https://kgkgkg.streamlit.app/'  # あなたのStreamlitアプリのリダイレクトURIを指定
-
 
 auth_url = 'https://account.box.com/api/oauth2/authorize'
 token_url = 'https://api.box.com/oauth2/token'
@@ -428,7 +426,8 @@ def main():
     auth_url = get_auth_url()
     st.markdown(f"[Boxで認証するにはここをクリックしてください]({auth_url})")
 
-    query_params = st.get_query_params()
+    # ここで引き続きst.experimental_get_query_paramsを使用します
+    query_params = st.experimental_get_query_params()
     auth_code = query_params.get('code', [None])[0]
 
     if auth_code:
@@ -486,7 +485,6 @@ def main():
                     upload_db_to_box(access_token, root_folder_id, file_stream, db_file_name)
 
             st.write(f"使用されたDBファイル名: {db_file_name}")
-
             df = show_db_content(db_file_path)
             st.write(df)
 
