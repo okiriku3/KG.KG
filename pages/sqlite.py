@@ -32,6 +32,8 @@ def main():
         st.write("Tables in the database:")
         table_names = tables['name'].tolist()
         selected_table = st.selectbox("Select a table to view", table_names)
+
+        st.write("table number",len(table_names))
         
         if selected_table:
             df = load_table_data("temp.db", selected_table)
